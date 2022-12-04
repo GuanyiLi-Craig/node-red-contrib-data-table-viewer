@@ -1,0 +1,351 @@
+<script type="text/javascript">
+    (function () {
+
+        const DEFAULT_VIEWER_WIDTH = 200;
+        const DEFAULT_VIEWER_HEIGHT = 160;
+        const DEFAULT_VIEWER_ROWS = 10;
+
+        const VIEWER_MARGINS = {
+            left: 30,
+            right: 10,
+            bottom: 30,
+            top: 15
+        };
+
+        RED.nodes.registerType('table-viewer', {
+            category: 'output',
+            color: '#88A882',
+            defaults: {
+                name: { value: "" },
+                property: {
+                    value: "payload",
+                    required: true,
+                    validate: RED.validators.typedInput("fieldType")
+                },
+                fieldType: {value:"msg"},
+                width: {
+                    value: DEFAULT_VIEWER_WIDTH,
+                    required: true,
+                    validate: function (v) { return !v || !isNaN(parseInt(v, 10)) }
+                },
+                height: {
+                    value: DEFAULT_VIEWER_HEIGHT,
+                    required: true,
+                    validate: function (v) { return !v || !isNaN(parseInt(v, 10)) }
+                },
+                points: {
+                    value: DEFAULT_VIEWER_ROWS,
+                    required: true,
+                    validate: function (v) { return !v || !isNaN(parseInt(v, 10)) }
+                },
+                active: { value: true },
+                hide: {value: true},
+                outputs: { value: 0 }
+            },
+            inputs: 1,
+            outputs: 0,
+            icon: "font-awesome/fa-table",
+            align: 'right',
+            label: function () {
+                return this.name || 'msg.'+this.property;
+            },
+            labelStyle: function () {
+                return this.name ? "node_label_italic" : "";
+            },
+            button: {
+                toggle: "active",
+                visible: function () { return !this.passthru; },
+                onclick: function () {
+                    const label = this.name || "table viewer";
+                    var node = this;
+                    $.ajax({
+                        url: `table-viewer/${this.id}/${this.active ? 'enable' : 'disable'}`,
+                        type: "POST",
+                        success: function (resp, textStatus, xhr) {
+                            const historyEvent = {
+                                t: 'edit',
+                                node: node,
+                                changes: {
+                                    active: !node.active
+                                },
+                                dirty: node.dirty,
+                                changed: node.changed
+                            };
+                            node.changed = true;
+                            node.dirty = true;
+                            RED.nodes.dirty(true);
+                            RED.history.push(historyEvent);
+                            RED.view.redraw();
+                            redraw(node);
+                            if (xhr.status == 200) {
+                                RED.notify("Successfully " + resp + ": " + label, "success");
+                            }
+                        },
+                        error: function (jqXHR, textStatus, errorThrown) {
+                            var message;
+
+                            switch (jqXHR.status) {
+                                case 404:
+                                    message = "node not deployed";
+                                    break;
+                                case 0:
+                                    message = "no response from server";
+                                    break;
+                                default:
+                                    message = `unexpected error (${textStatus}) ${errorThrown}`;
+                            }
+
+                            RED.notify(`<strong>Error</strong>: ${message}`, "error");
+                        }
+                    });
+                }
+            },
+            oneditprepare: function () {
+                var that = this;
+                $('#node-input-property').typedInput({
+                    default: 'msg',
+                    typeField: $("#node-input-fieldType"),
+                    types: ['msg']
+                });
+                $('#node-input-property').typedInput('value', this.property || 'payload');
+
+                if ($("#node-input-passthru").is(":checked")) { that.outputs = 1; }
+                $("#node-input-passthru").change(function () {
+                    if ($("#node-input-passthru").is(":checked")) {
+                        that.outputs = 1;
+                        that.active = true;
+                    }
+                    else {
+                        that.outputs = 0;
+                    }
+                });
+            }
+        });
+
+        // array of all data for each node
+        const latestData = {};
+        // ui state and functions for updates
+        const tableInfo = {};
+
+        var remove = function(id) {
+            const $table = document.getElementById(`table-viewer-output-table-${id}`);
+            const $bubble = document.getElementById(`table-viewer-output-bubble-${id}`);
+            const $reset = document.getElementById(`table-viewer-output-reset-${id}`);
+
+            $table && $table.remove();
+            $bubble && $bubble.remove();
+            $reset && $reset.remove();
+        }
+
+        var reset = function (id) {
+            remove(id)
+            delete latestData[id];
+            delete tableInfo[id];
+        }
+
+        var redraw = function (node) {
+            let id = node.id
+            remove(id);
+            if (latestData[id] && (node.active || !node.hide)) {
+                render(id, latestData[id], node);
+            }
+        }
+
+        var render = function (id, data, node) {
+            let $chart = document.getElementById("table-viewer-output-chart-" + id);
+            let chartWidth = node.width ? parseInt(node.width) : DEFAULT_CHART_WIDTH;
+            let chartHeight = node.height ? parseInt(node.height) : DEFAULT_CHART_HEIGHT;
+
+            if (!$chart) {
+                const $container = document.getElementById(id)
+                if (!$container) { return }
+
+                // create the chart bubble
+                const bubble = document.createElementNS("http://www.w3.org/2000/svg", 'polyline')
+                bubble.setAttribute('id', `table-viewer-output-bubble-${id}`)
+                bubble.setAttribute('style', 'fill:#E8F0E8')
+                bubble.setAttribute('stroke', '#999999')
+
+                chartBB = {
+                    x: 0,
+                    y: 45,
+                    width: chartWidth,
+                    height: chartHeight
+                }
+
+                const left = chartBB.x;
+                const top = chartBB.y + 2;
+                const right = chartBB.x + chartBB.width;
+                const bottom = chartBB.y + chartBB.height;
+
+                const points =
+                    `${left + 4},${top - 17} ${left + 4},${top} ` +
+                    `${right},${top} ${right},${bottom} ` +
+                    `${left},${bottom} ${left},${top - 21}`;
+
+                bubble.setAttribute('points', points)
+                $container.insertBefore(bubble, $container.lastChild.nextSibling);
+
+                // add a group to hold the d3 chart
+                const chartGroup = document.createElementNS("http://www.w3.org/2000/svg", 'g');
+                chartGroup.setAttribute('id', `table-viewer-output-chart-${id}`);
+                $container.insertBefore(chartGroup, $container.lastChild.nextSibling);
+
+                let margin = CHART_MARGINS;
+
+                // add a button to reset chart
+                const resetGroup = document.createElementNS("http://www.w3.org/2000/svg", 'g');
+                resetGroup.setAttribute('id', `table-viewer-output-reset-${id}`);
+                $container.insertBefore(resetGroup, $container.lastChild.nextSibling);
+
+                let d3Reset = d3.select(resetGroup)
+                    .attr('class','delete')
+                    .attr('transform', `translate(${chartWidth-margin.right-10},70)`)
+                    .on('click', () => {
+                        reset(id);
+                    });
+                d3Reset.append('text').style({
+                    'font-family':'FontAwesome',
+                    'font-weight': 'normal',
+                    'font-size':'14px',
+                    'fill':'#999',
+                    'stroke':'none'}).text('\uf1f8');
+
+                let height = chartHeight - margin.top - margin.bottom;
+
+                // chart group
+                let d3chart = d3.select(chartGroup);
+                let yScale = d3.scale.linear().range([height, 0]);
+                let yAxis = d3.svg.axis().scale(yScale).orient("left").ticks(5);
+                yScale.domain([d3.min(data, d => d.value), d3.max(data, d => d.value)]);
+
+                let yAxisElement = d3chart.append("g")
+                    .attr("class", "y axis")
+                    .call(yAxis);
+                
+                let axisWidth = yAxisElement.node().getBBox().width;
+                let leftMargin = Math.max(margin.left, axisWidth+4);
+                let width = chartWidth - leftMargin - margin.right;
+
+                d3chart.attr("transform", `translate(${leftMargin},${45 + margin.top})`);
+
+                let xScale = d3.time.scale().range([0, width]);
+                let xAxis = d3.svg.axis().scale(xScale).orient("bottom").ticks(3);
+
+                let valueLine = d3.svg.line()
+                    .x(function (d) {
+                        return xScale(d.time);
+                    })
+                    .y(function (d) {
+                        return yScale(d.value);
+                    });
+
+                xScale.domain(d3.extent(data, d => d.time));
+
+                d3chart.append("path")
+                    .attr("class", "chart-line")
+                    .style(LINE_STYLE)
+                    .attr("d", valueLine(data));
+
+                d3chart.append("g")
+                    .attr("class", "x axis")
+                    .attr("transform", `translate( 0, ${height})`)
+                    .call(xAxis);
+
+                d3chart.selectAll(".axis line")
+                    .style(AXIS_STYLE);
+
+                d3chart.selectAll(".axis path")
+                    .style(AXIS_STYLE);
+
+                $chart = chartGroup
+
+                // save for updates to the chart
+                chartInfo[id] = { xScale, yScale, xAxis, yAxis, valueLine, width };
+            } else {
+                // updating chart
+                let d3chart = d3.select($chart).transition();
+                let { xScale, yScale, xAxis, yAxis, valueLine, width } = chartInfo[id];
+
+                xScale.domain(d3.extent(data, d => d.time));
+                yScale.domain([d3.min(data, d => d.value), d3.max(data, d => d.value)]);
+
+                let yAxisElement = d3chart.select(".y.axis") // change the y axis
+                    .duration(200)
+                    .call(yAxis);
+
+                let margin = CHART_MARGINS;
+
+                // get the width of the y-axis in case we need room
+                let axisWidth = yAxisElement.node().getBBox().width;
+                let leftMargin = Math.max(margin.left, axisWidth+4);
+                let newWidth = chartWidth - leftMargin - margin.right;
+
+                if (newWidth != width) {
+                    // adjust scaling to new width
+                    xScale.range([0, newWidth]);
+                    valueLine.x(function (d) {
+                        return xScale(d.time);
+                    });
+
+                    // move chart over for room
+                    d3chart.attr("transform", `translate(${leftMargin},${45 + margin.top})`);
+                    chartInfo[id].width = newWidth;
+                }
+
+                d3chart.select(".chart-line")
+                    .duration(200)
+                    .attr("d", valueLine(data));
+
+                d3chart.select(".x.axis")
+                    .duration(200)
+                    .call(xAxis);
+            }
+        }
+
+        RED.events.on("editor:save", redraw)
+
+        RED.comms.subscribe('table-viewer', function (event, data) {
+            reset(data.id);
+        })
+    })();
+</script>
+
+<script type="text/html" data-template-name="table-viewer">
+    <div class="form-row">
+        <label style="padding-top: 8px" for="node-input-property"><i class="fa fa-ellipsis-h"></i> Property</label>
+        <input type="text" id="node-input-property" style="width:70%">
+        <input type="hidden" id="node-input-fieldType">
+    </div>
+    <div class="form-row">
+        <label for="node-input-height"><i class="fa fa-arrows-v"></i>&nbsp;Height</label>
+        <input type="number" id="node-input-height" style="width:125px !important">
+        &nbsp;&nbsp;<i class="fa fa-arrows-h"></i>&nbsp;Width</label>
+        <input type="number" id="node-input-width" style="width:125px !important">
+    </div>
+    <div class="form-row">
+        <label for="node-input-rows"><i class="fa fa-line-chart"></i>Rows</label>
+        <input type="number" id="node-input-rows">
+    </div>
+    <div class="form-row">
+        <label>&nbsp;</label>
+        <input type="checkbox" id="node-input-hide" style="display:inline-block; width:auto; vertical-align:top;">
+        <label for="node-input-hide" style="width:70%;"> Hide viewer on deactivate</label>
+    </div> 
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+</script>
+
+<script type="text/html" data-help-name="table-viewer">
+    <p>Simple tabular data viewer for previewing data in sql result like format.
+    <p><strong>Height:</strong><br/>
+    The height (in pixels) of the viewer.</p>  
+    <p><strong>Width:</strong><br/>
+    The width (in pixels) of the viewer.</p>
+    <p><strong>Num rows:</strong><br/>
+    The number of rows to display in the table.</p>          
+    <p><strong>Hide viewer on deactivate:</strong><br/>
+    Hide the viewer when node is deactivated.</p>
+</script>
