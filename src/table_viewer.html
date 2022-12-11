@@ -120,7 +120,6 @@
 
         var redraw = function (node) {
             let id = node.id
-            console.log(id)
             remove(id);
             if (latestData[id] && node.active) {
                 render(id, latestData[id], node);
@@ -206,7 +205,6 @@
                 .style("background-color", "lightgray")
                 .style("font-weight", "bold")
                 .style("text-transform", "uppercase");
-                console.log('create table 5');
 
             var rows = tbody.selectAll("tr")
                 .data(data.slice(1))
@@ -227,21 +225,20 @@
         }
 
         RED.comms.subscribe('table-viewer', function (event, data) {
-            console.log(data);
+
             if (data.hasOwnProperty("data")) {
                 if (!latestData[data.id]) {
-                    latestData[data.id] = [];
+                    latestData[data.id] = {};
                 }
                 let node = RED.nodes.node(data.id);
                 let numRows = node.rows ? parseInt(node.rows) : DEFAULT_TABLE_ROWS;
-                console.log(data);
-                console.log(data.data);
+
                 let tableData = data.data
-                if (data.data.length > numRows) {
-                    tableData = data.data.subarray(0, numRows);
+                if (data.data.value.length > numRows) {
+                    tableData.value = data.data.value.slice(0, numRows);
                 }
-                latestData[data.id].push(tableData);
-                console.log(tableData);
+                latestData[data.id] = tableData;
+
                 remove(data.id);
                 render(data.id, tableData, node);
             } else {

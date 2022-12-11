@@ -15,10 +15,8 @@ module.exports = function(RED) {
             if (data) {
                 d.data = data;
             }
-            console.log(data)
             try {
                 RED.comms.publish("table-viewer", d);
-                console.log('pushed msg')
             }
             catch(e) {
                 node.error("Error sending data", msg);
@@ -43,9 +41,6 @@ module.exports = function(RED) {
         node.on("input", function(msg) {       
             if (this.active !== true) { return; }
             let value = msg[node.property];
-
-            console.log(value);
-            console.log(typeof value);
 
             if (value == null) {      // null or undefined
                 clearError();
@@ -77,8 +72,6 @@ module.exports = function(RED) {
         var state = req.params.state;
         var node = RED.nodes.getNode(req.params.id);
         
-        console.log(node);
-
         if(node === null || typeof node === "undefined") {
             res.sendStatus(404);
             return;  
