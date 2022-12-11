@@ -49,6 +49,7 @@ module.exports = function(RED) {
             }
             if (typeof value !== 'object') {
                 handleError(`msg.${node.property} is not an array`, msg, `msg.${node.property} is not an array`);
+                sendDataToClient(null, msg);    // delete chart
                 return;
             }
             clearError();
