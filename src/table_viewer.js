@@ -3,7 +3,6 @@ module.exports = function(RED) {
     function TableViewer(config) {
         RED.nodes.createNode(this, config);
         this.active = (config.active === null || typeof config.active === "undefined") || config.active;
-        this.passthru = config.passthru;
         this.property = config.property || 'payload';
         
         var node = this;
@@ -16,8 +15,10 @@ module.exports = function(RED) {
             if (data) {
                 d.data = data;
             }
+            console.log(data)
             try {
                 RED.comms.publish("table-viewer", d);
+                console.log('pushed msg')
             }
             catch(e) {
                 node.error("Error sending data", msg);
@@ -43,16 +44,18 @@ module.exports = function(RED) {
             if (this.active !== true) { return; }
             let value = msg[node.property];
 
+            console.log(value);
+            console.log(typeof value);
+
             if (value == null) {      // null or undefined
                 clearError();
                 sendDataToClient(null, msg);    // delete chart
                 return;
             }
-            if (typeof value !== 'number') {
-                handleError(`msg.${node.property} is not a number`, msg, `msg.${node.property} is not a number`);
+            if (typeof value !== 'object') {
+                handleError(`msg.${node.property} is not an array`, msg, `msg.${node.property} is not an array`);
                 return;
             }
-            if (node.passthru) { node.send(msg); }
             clearError();
             data = {
                 value,
@@ -67,7 +70,7 @@ module.exports = function(RED) {
             node.status({});
         });
     }
-    RED.nodes.registerType("table-viewer", DataView);
+    RED.nodes.registerType("table-viewer", TableViewer);
     
     // Via the button on the node (in the FLOW EDITOR), the image pushing can be enabled or disabled
     RED.httpAdmin.post("/table-viewer/:id/:state", RED.auth.needsPermission("image-output.write"), function(req,res) {

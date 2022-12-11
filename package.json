@@ -1,11 +1,8 @@
 {
-    "name": "nnode-red-contrib-data-table-viewer",
+    "name": "node-red-contrib-data-table-viewer",
     "version": "0.0.1",
     "description": "Node-red node show data on flow screen in a tabular fasion",
-    "dependencies": {
-      "i2c-bus": "^5.2.2"
-    },
-    "main": "table_viewer.js",
+    "dependencies": {},
     "scripts": {
       "test": "echo \"Error: no test specified\" && exit 1"
     },
@@ -22,7 +19,7 @@
     },
     "node-red": {
       "nodes": {
-        "i2c": "src/table_viewer.js"
+        "table-viewer": "src/table_viewer.js"
       }
     },
     "author": {
