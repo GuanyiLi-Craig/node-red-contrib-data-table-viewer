@@ -5,13 +5,6 @@
         const DEFAULT_TABLE_HEIGHT = 160;
         const DEFAULT_TABLE_ROWS = 10;
 
-        const TABLE_MARGINS = {
-            left: 30,
-            right: 10,
-            bottom: 30,
-            top: 15
-        };
-
         RED.nodes.registerType('table-viewer', {
             category: 'output',
             color: '#88A882',
@@ -135,241 +128,121 @@
         }
 
 
-        var render = function (id, data, node) {
-            console.log('render');
-            let $table = document.getElementById("table-viewer-output-table-" + id);
+        var render = function (id, inputData, node) {
+
             let tableWidth = node.width ? parseInt(node.width) : DEFAULT_CHART_WIDTH;
             let tableHeight = node.height ? parseInt(node.height) : DEFAULT_CHART_HEIGHT;
+            let data = inputData.value;
 
-            console.log('set table');
-            if (!$table) {
-                // create table
-                const $container = document.getElementById(id)
-                if (!$container) { return }
+            // create table
+            const $container = document.getElementById(id)
+            if (!$container) { return }
 
-                // build the out layer
-                const bubble = document.createElementNS("http://www.w3.org/2000/svg", 'polyline')
-                bubble.setAttribute('id', "table-viewer-output-bubble-" + id)
-                bubble.setAttribute('style', 'fill:#E8F0E8')
-                bubble.setAttribute('stroke', '#999999')
-                chartBB = {
-                    x: 0,
-                    y: 45,
-                    width: tableWidth,
-                    height: tableHeight
-                }
-
-                const left = chartBB.x;
-                const top = chartBB.y + 2;
-                const right = chartBB.x + chartBB.width;
-                const bottom = chartBB.y + chartBB.height;
-
-                const points =
-                    `${left + 4},${top - 17} ${left + 4},${top} ` +
-                    `${right},${top} ${right},${bottom} ` +
-                    `${left},${bottom} ${left},${top - 21}`;
-
-                bubble.setAttribute('points', points);
-                $container.insertBefore(bubble, $container.lastChild.nextSibling)
-
-                console.log('create table 2');
-                const tableGroup = document.createElementNS("http://www.w3.org/2000/svg", 'g');
-                tableGroup.setAttribute('id', `table-viewer-output-table-${id}`);
-                $container.insertBefore(tableGroup, $container.lastChild.nextSibling);
-
-                console.log('create table 3');
-                var data = new Array();
-                var xpos = 1; //starting xpos and ypos at 1 so the stroke will show when we make the grid below
-                var ypos = 1;
-                var width = tableWidth/5;
-                var height = tableHeight/5;
-
-                // iterate for rows 
-                for (var row = 0; row < 10; row++) {
-                    data.push( new Array() );
-
-                    // iterate for cells/columns inside rows
-                    for (var column = 0; column < 10; column++) {
-                        data[row].push({
-                            x: xpos,
-                            y: ypos,
-                            width: width,
-                            height: height
-                        })
-                        // increment the x position. I.e. move it over by 50 (width variable)
-                        xpos += width;
-                    }
-                    // reset the x position after a row is complete
-                    xpos = 1;
-                    // increment the y position for the next row. Move it down 50 (height variable)
-                    ypos += height; 
-                }
-                console.log(data);
-                let d3table = d3.select(tableGroup);
-
-                d3table.attr("transform", `translate(${4},${50})`);
-                
-                var grid =d3table.append("svg")
-                    .attr("width", tableWidth)
-                    .attr("height", tableHeight)
-                    .attr("viewBox", [0, 0, tableWidth, tableHeight]);
-                    
-
-                var row = grid.selectAll(".row")
-                    .data(data)
-                    .enter()
-                    .append("g")
-                    .attr("class", "row")
-                    .append("g")
-                    .attr("class", "column");
-                    
-                var column = row.selectAll(".square")
-                    .data(function(d) { return d; })
-                    .enter()
-                    .append("rect")
-                    .attr("class","square")
-                    .attr("x", function(d) { return d.x; })
-                    .attr("y", function(d) { return d.y; })
-                    .attr("width", function(d) { return d.width; })
-                    .attr("height", function(d) { return d.height; })
-                    .style("fill", "#fff")
-                    .style("stroke", "#222");
-
-                var columnText = row.selectAll(".column")  // select .column val from data
-                    .data(function(d) { return d; })
-                    .enter()
-                    .append("text")
-                    .text("a")
-                    .attr("x", function(d) { return d.x+10; })
-                    .attr("y", function(d) { return d.y+10; })
-                    .style("fill", "red")
-                    .style("font-size", "15");
-                
-/*
-                var tt = d3table.append('table').attr("x", 20)
-                    .attr("y", 20);
-;
-
-                var thead = tt.append('thead').attr("class", "table columns");
-                var tbody = tt.append('tbody').attr("class", "table body");
-
-                console.log('create table 4');
-
-                thead.append("tr")
-                    .selectAll("th")
-                    .data(data[0])
-                    .enter().append("th")
-                    .text(function(d) { return d; })
-                    .style("border", "1px black solid")
-                    .style("padding", "5px")
-                    .style("background-color", "lightgray")
-                    .style("font-weight", "bold")
-                    .style("text-transform", "uppercase");
-                    console.log('create table 5');
-
-                var rows = tbody.selectAll("tr")
-                    .data(data.slice(1))
-                    .enter().append("tr")
-                    .selectAll("td")
-                    .data(function(d){return d;})
-                    .enter().append("td")
-                    .style("border", "1px black solid")
-                    .style("padding", "5px")
-                    //.on("mouseover", function(){
-                    //    d3.select(this).style("background-color", "powderblue");
-                    //})
-                    //.on("mouseout", function(){
-                    //    d3.select(this).style("background-color", "white");
-                    //})
-                    .text(function(d){return d;})
-                    .style("font-size", "12px");    
-                
-                // headers
-                /*
-                d3table.append("thead").append("tr")
-                    .selectAll("th")
-                    .data(data[0])
-                    .enter().append("th")
-                    .text(function(d) { return d; })
-                    .style("border", "1px black solid")
-                    .style("padding", "5px")
-                    .style("background-color", "lightgray")
-                    .style("font-weight", "bold")
-                    .style("text-transform", "uppercase");
-                    console.log('create table 5');
-                // data
-                d3table.append("tbody")
-                    .selectAll("tr").data(data.slice(1))
-                    .enter().append("tr")
-                    .selectAll("td")
-                    .data(function(d){return d;})
-                    .enter().append("td")
-                    .style("border", "1px black solid")
-                    .style("padding", "5px")
-                    //.on("mouseover", function(){
-                    //    d3.select(this).style("background-color", "powderblue");
-                    //})
-                    //.on("mouseout", function(){
-                    //    d3.select(this).style("background-color", "white");
-                    //})
-                    .text(function(d){return d;})
-                    .style("font-size", "12px");    
-                    console.log('create table 6');
-*/
-                console.log(d3table);
-                console.log(tableGroup);
-                $table = tableGroup;
-                console.log($container);
-            } else {
-                console.log('update table');
-                let d3table = d3.select($table).transition();
-
-
-                // headers
-                d3table.append("thead").append("tr")
-                    .selectAll("th")
-                    .data(data[0])
-                    .enter().append("th")
-                    .text(function(d) { return d; })
-                    .style("border", "1px black solid")
-                    .style("padding", "5px")
-                    .style("background-color", "lightgray")
-                    .style("font-weight", "bold")
-                    .style("text-transform", "uppercase");
-
-                // data
-                d3table.append("tbody")
-                    .selectAll("tr").data(data.slice(1))
-                    .enter().append("tr")
-                    .selectAll("td")
-                    .data(function(d){return d;})
-                    .enter().append("td")
-                    .style("border", "1px black solid")
-                    .style("padding", "5px")
-                    //.on("mouseover", function(){
-                    //    d3.select(this).style("background-color", "powderblue");
-                    //})
-                    //.on("mouseout", function(){
-                    //    d3.select(this).style("background-color", "white");
-                    //})
-                    .text(function(d){return d;})
-                    .style("font-size", "12px");
+            // build the out layer
+            const bubble = document.createElementNS("http://www.w3.org/2000/svg", 'polyline')
+            bubble.setAttribute('id', "table-viewer-output-bubble-" + id)
+            bubble.setAttribute('style', 'fill:#E8F0E8')
+            bubble.setAttribute('stroke', '#999999')
+            chartBB = {
+                x: 0,
+                y: 45,
+                width: tableWidth,
+                height: tableHeight
             }
+
+            const left = chartBB.x;
+            const top = chartBB.y + 2;
+            const right = chartBB.x + chartBB.width;
+            const bottom = chartBB.y + chartBB.height;
+
+            const points =
+                `${left + 4},${top - 17} ${left + 4},${top} ` +
+                `${right},${top} ${right},${bottom} ` +
+                `${left},${bottom} ${left},${top - 21}`;
+
+            bubble.setAttribute('points', points);
+            $container.insertBefore(bubble, $container.lastChild.nextSibling)
+
+            const tableGroup = document.createElementNS("http://www.w3.org/2000/svg", 'g');
+            tableGroup.setAttribute('id', `table-viewer-output-table-${id}`);
+            $container.insertBefore(tableGroup, $container.lastChild.nextSibling);
+
+            let d3table = d3.select(tableGroup);
+
+            d3table.attr("transform", `translate(${4},${50})`);
+            var grid =d3table.append("svg")
+                .attr("width", tableWidth-5)
+                .attr("height", tableHeight-5)
+                .attr("viewBox", [0, 0, tableWidth-5, tableHeight-5]);
+
+            var fo = grid.append('foreignObject')
+                    .attr({
+                        'x': 0,
+                        'y': 0,
+                        'width': tableWidth-5,
+                        'height': tableHeight-5
+                    });
+            var bd = fo.append('xhtml:div')
+                .style({
+                    "height": tableHeight-10 + "px", 
+                    "width": tableWidth-10 + "px",
+                    "overflow": "scroll",
+                    "border": "1px black solid"
+                });
+
+            var tt = bd.append('table');
+
+            var thead = tt.append('thead').attr("class", "table columns");
+            var tbody = tt.append('tbody').attr("class", "table body");
+
+            thead.append("tr")
+                .selectAll("th")
+                .data(data[0])
+                .enter().append("th")
+                .text(function(d) { return d; })
+                .style("font-size", "10px")
+                .style("border", "1px black solid")
+                .style("padding", "5px")
+                .style("background-color", "lightgray")
+                .style("font-weight", "bold")
+                .style("text-transform", "uppercase");
+                console.log('create table 5');
+
+            var rows = tbody.selectAll("tr")
+                .data(data.slice(1))
+                .enter().append("tr")
+                .selectAll("td")
+                .data(function(d){return d;})
+                .enter().append("td")
+                .style("border", "1px black solid")
+                .style("padding", "5px")
+                .on("mouseover", function(){
+                    d3.select(this).style("background-color", "powderblue");
+                })
+                .on("mouseout", function(){
+                    d3.select(this).style("background-color", "#E8F0E8");
+                })
+                .text(function(d){return d;})
+                .style("font-size", "10px");
         }
 
         RED.comms.subscribe('table-viewer', function (event, data) {
-
+            console.log(data);
             if (data.hasOwnProperty("data")) {
                 if (!latestData[data.id]) {
                     latestData[data.id] = [];
                 }
-
+                let node = RED.nodes.node(data.id);
                 let numRows = node.rows ? parseInt(node.rows) : DEFAULT_TABLE_ROWS;
                 console.log(data);
                 console.log(data.data);
-                tableData = data.data.subarray(0, numRows);
+                let tableData = data.data
+                if (data.data.length > numRows) {
+                    tableData = data.data.subarray(0, numRows);
+                }
                 latestData[data.id].push(tableData);
                 console.log(tableData);
+                remove(data.id);
                 render(data.id, tableData, node);
             } else {
                 remove(data.id);

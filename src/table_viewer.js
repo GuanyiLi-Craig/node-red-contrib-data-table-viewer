@@ -77,6 +77,8 @@ module.exports = function(RED) {
         var state = req.params.state;
         var node = RED.nodes.getNode(req.params.id);
         
+        console.log(node);
+
         if(node === null || typeof node === "undefined") {
             res.sendStatus(404);
             return;  
