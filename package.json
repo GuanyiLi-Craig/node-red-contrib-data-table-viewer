@@ -1,6 +1,6 @@
 {
     "name": "node-red-contrib-data-table-viewer",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "Node-red node show data on flow screen in a tabular fasion",
     "dependencies": {},
     "scripts": {
