@@ -242,6 +242,7 @@
                 remove(data.id);
                 render(data.id, tableData, node);
             } else {
+                delete latestData[data.id];
                 remove(data.id);
             }
         })
