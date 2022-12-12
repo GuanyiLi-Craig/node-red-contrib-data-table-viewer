@@ -189,9 +189,20 @@
                     "border": "1px black solid"
                 });
 
-            var tt = bd.append('table');
+            var tt = bd.append('table')
+                .style({
+                    "max-height": tableHeight-10 + "px", 
+                    "max-width": tableWidth-10 + "px",
+                    "height": "100%", 
+                    "width": "100%",
+                    "border-left": "1px black solid",
+                    "border-collapse": "separate"
+                });
 
-            var thead = tt.append('thead').attr("class", "table columns");
+            var thead = tt.append('thead')
+                .attr("class", "table columns")
+                .style("position", "sticky")
+                .style("top", 0);;
             var tbody = tt.append('tbody').attr("class", "table body");
 
             thead.append("tr")
@@ -200,11 +211,14 @@
                 .enter().append("th")
                 .text(function(d) { return d; })
                 .style("font-size", "10px")
-                .style("border", "1px black solid")
-                .style("padding", "5px")
+                .style("border-right", "1px black solid")
+                .style("border-top", "1px black solid")
+                .style("border-bottom", "1px black solid")
+                .style("padding", "2px")
                 .style("background-color", "lightgray")
                 .style("font-weight", "bold")
-                .style("text-transform", "uppercase");
+                .style("position", "sticky")
+                .style("top", 0);
 
             var rows = tbody.selectAll("tr")
                 .data(data.slice(1))
@@ -212,8 +226,8 @@
                 .selectAll("td")
                 .data(function(d){return d;})
                 .enter().append("td")
-                .style("border", "1px black solid")
-                .style("padding", "5px")
+                .style("border-right", "1px black solid")
+                .style("border-bottom", "1px black solid")
                 .on("mouseover", function(){
                     d3.select(this).style("background-color", "powderblue");
                 })
@@ -221,7 +235,10 @@
                     d3.select(this).style("background-color", "#E8F0E8");
                 })
                 .text(function(d){return d;})
-                .style("font-size", "10px");
+                .style({
+                    "font-size": "10px",
+                    "text-align": "center",
+                });
         }
 
         RED.comms.subscribe('table-viewer', function (event, data) {
