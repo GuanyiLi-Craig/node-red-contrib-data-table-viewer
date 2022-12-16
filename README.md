@@ -2,7 +2,7 @@
 
 A table viewer node which can preview the data in a tabular fasion. 
 
-![table viewer](examples/table_viewer.gif)
+![table viewer](https://github.com/GuanyiLi-Craig/static-files/blob/422bc7a9b5dba629ca61a82363e9983c58ad855d/node-red-contrib-data-table-viewer/table_viewer.gif)
 
 This project is inspired by following two projects.
 
@@ -25,4 +25,4 @@ On flow editor, user can taggle the active button. If active is on, it will show
 
 User can adjust the width and height of the table size. And also can scroll up-down or left-right if the table size is larger than the area. 
 
-![table viewer resize](examples/table_viewer_size.gif)
+![table viewer resize](https://github.com/GuanyiLi-Craig/static-files/blob/422bc7a9b5dba629ca61a82363e9983c58ad855d/node-red-contrib-data-table-viewer/table_viewer_size.gif)
