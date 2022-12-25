@@ -44,14 +44,30 @@ module.exports = function(RED) {
 
             if (value == null) {      // null or undefined
                 clearError();
-                sendDataToClient(null, msg);    // delete chart
+                sendDataToClient(null, msg);    // delete table
                 return;
             }
-            if (typeof value !== 'object') {
+            if (!Array.isArray(value)) {
                 handleError(`msg.${node.property} is not an array`, msg, `msg.${node.property} is not an array`);
-                sendDataToClient(null, msg);    // delete chart
+                sendDataToClient(null, msg);    // delete table
                 return;
             }
+            // check size
+            if (value.length == 0) {
+                handleError(`msg.${node.property} is an empty array`, msg, `msg.${node.property} is an empty array`);
+                sendDataToClient(null, msg);    // delete table
+                return;
+            }
+            // check value element. if it is an array, then return the original value,
+            // if it is an object - like returned from db, then convert it into the acceptable format.
+            if (!Array.isArray(value[0])) {
+                var newValue = [Object.keys(value[0])];
+                value.forEach(row => {
+                    newValue = newValue.concat([Object.values(row)]);
+                })
+                value = newValue;
+            }
+
             clearError();
             data = {
                 value,
