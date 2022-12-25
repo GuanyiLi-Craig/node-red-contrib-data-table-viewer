@@ -20,6 +20,12 @@ let data = [
     [0, "TSLA", 222.22],
     [0, "AAPL", 144.44]];
 ```
+or array of objects, such as returned from database directly. 
+```javascript
+let data = [
+    [{"id": 0,"Stock":"TSLA","Price":222.22}],
+    [{"id": 2,"Stock":"AAPL","Price":144.44}]];
+```
 
 On flow editor, user can taggle the active button. If active is on, it will show a table under the node. 
 
